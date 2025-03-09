@@ -23,7 +23,18 @@ const calculateWeeklyVolume = (data: any[]) => {
     // Sum up distances from workouts (in kilometers)
     const totalDistanceKm = _.sumBy(workouts, (workout) => {
       // Use the distance field if available, otherwise estimate from calories
-      return workout.distance || (workout.calories ? workout.calories / 100 : 0);
+      // Make sure to apply proper scaling factor (1/100 of previous values)
+      let distance = 0;
+      
+      if (typeof workout.distance === 'number') {
+        // If distance exists, ensure it's in a reasonable range (1-100km per workout)
+        distance = workout.distance > 100 ? workout.distance / 1000 : workout.distance;
+      } else if (workout.calories) {
+        // If only calories available, use a more conservative estimate
+        distance = workout.calories / 10000;
+      }
+      
+      return distance;
     });
     
     return {

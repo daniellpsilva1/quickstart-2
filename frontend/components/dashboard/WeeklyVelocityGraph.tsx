@@ -11,8 +11,8 @@ import {
 } from "recharts";
 import _ from "lodash";
 
-// Calculate average weekly workout intensity
-const calculateWeeklyIntensity = (data: any[]) => {
+// Calculate average weekly velocity (km/h)
+const calculateWeeklyVelocity = (data: any[]) => {
   // Group data by week
   const groupedByWeek = _.groupBy(data, (item) => {
     return moment(item.time_start).startOf('week').format('YYYY-MM-DD');
@@ -20,20 +20,26 @@ const calculateWeeklyIntensity = (data: any[]) => {
 
   // Convert to array of weekly data
   return Object.entries(groupedByWeek).map(([week, workouts]) => {
-    // For real workout data, we can calculate actual intensity metrics
-    // We'll use distance divided by duration (in hours) to get km/h
+    // For real workout data, we calculate velocity as distance/time (km/h)
     
     let totalDistance = 0;
     let totalDurationHours = 0;
     
     workouts.forEach(workout => {
-      // Get distance
-      const distance = workout.distance || (workout.calories ? workout.calories / 100 : 0);
+      // Get distance with proper scaling
+      let distance = 0;
+      if (typeof workout.distance === 'number') {
+        // If distance exists, ensure it's in a reasonable range (1-100km per workout)
+        distance = workout.distance > 100 ? workout.distance / 1000 : workout.distance;
+      } else if (workout.calories) {
+        // If only calories available, use a more conservative estimate
+        distance = workout.calories / 10000;
+      }
       
       // Get duration in hours
       let durationHours = 0;
       if (workout.duration) {
-        // If duration is in minutes
+        // If duration is in minutes, convert to hours
         durationHours = workout.duration / 60;
       } else if (workout.time_start && workout.time_end) {
         // Calculate from start/end times
@@ -42,19 +48,27 @@ const calculateWeeklyIntensity = (data: any[]) => {
         durationHours = endTime.diff(startTime, 'hours', true);
       }
       
-      totalDistance += distance;
-      totalDurationHours += durationHours;
+      // Only count if we have both distance and duration
+      if (distance > 0 && durationHours > 0) {
+        totalDistance += distance;
+        totalDurationHours += durationHours;
+      }
     });
     
-    // Calculate average intensity (km/h)
-    let avgIntensity = 0;
+    // Calculate average velocity (km/h)
+    let avgVelocity = 0;
     if (totalDurationHours > 0) {
-      avgIntensity = totalDistance / totalDurationHours;
+      avgVelocity = totalDistance / totalDurationHours;
+      
+      // Sanity check for unreasonable values
+      if (avgVelocity > 50) {
+        avgVelocity = 50; // Cap at 50 km/h which is still very fast
+      }
     }
     
     return {
       week: moment(week).valueOf(),
-      intensityKmh: parseFloat(avgIntensity.toFixed(2)),
+      velocityKmh: parseFloat(avgVelocity.toFixed(2)),
       year: moment(week).format('YYYY'),
       weekNumber: moment(week).format('W'),
       workoutCount: workouts.length
@@ -65,11 +79,11 @@ const calculateWeeklyIntensity = (data: any[]) => {
 export const WeeklyVelocityGraph: React.FunctionComponent<{ data: any[] }> = ({
   data,
 }) => {
-  const weeklyIntensityData = calculateWeeklyIntensity(data);
+  const weeklyVelocityData = calculateWeeklyVelocity(data);
   
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={weeklyIntensityData}>
+      <LineChart data={weeklyVelocityData}>
         <XAxis
           axisLine={false}
           dataKey="week"
@@ -93,8 +107,8 @@ export const WeeklyVelocityGraph: React.FunctionComponent<{ data: any[] }> = ({
         <Tooltip
           labelFormatter={(timestamp) => `Week ${moment(timestamp).format('W')} - ${moment(timestamp).format('YYYY')}`}
           formatter={(value: number, name: string) => {
-            if (name === 'intensityKmh') {
-              return [`${value} km/h`, 'Average Intensity'];
+            if (name === 'velocityKmh') {
+              return [`${value} km/h`, 'Average Velocity'];
             }
             return [value, name];
           }}
@@ -103,13 +117,13 @@ export const WeeklyVelocityGraph: React.FunctionComponent<{ data: any[] }> = ({
         />
         <Line
           type="monotone"
-          dataKey="intensityKmh"
+          dataKey="velocityKmh"
           stroke="#82ca9d"
           fill="#82ca9d"
           strokeWidth={2}
           dot={{ stroke: '#82ca9d', strokeWidth: 2, r: 4 }}
           activeDot={{ stroke: '#82ca9d', strokeWidth: 2, r: 6 }}
-          name="Average Intensity"
+          name="Average Velocity"
         />
       </LineChart>
     </ResponsiveContainer>

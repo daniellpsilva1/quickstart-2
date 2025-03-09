@@ -29,7 +29,7 @@ const processWorkoutData = (data: any) => {
       time_end: moment(activity.date).add(1, 'hour').toISOString(), // Estimate end time
       calories: activity.calories_total || 0,
       duration: (activity.high || 0) + (activity.medium || 0) + (activity.low || 0),
-      distance: activity.calories_total ? activity.calories_total / 100 : 0, // Estimate distance
+      distance: activity.calories_total ? activity.calories_total / 10000 : 0, // Estimate distance in km with proper scaling
       source: activity.source,
       sport: {
         name: "Exercise",
@@ -43,7 +43,7 @@ const processWorkoutData = (data: any) => {
   return [];
 };
 
-export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
+export const WeeklyStatsPanel = ({ userId }: { userId: string | null }) => {
   const [startDate, setStartDate] = useState(
     moment().subtract(6, 'months').toISOString()
   );
@@ -52,6 +52,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
   const [apiResponse, setApiResponse] = useState<any>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [requestDetails, setRequestDetails] = useState<any>(null);
+  const [timeRange, setTimeRange] = useState<string>("6m");
 
   // Reset data fetching when userId changes
   useEffect(() => {
@@ -62,9 +63,12 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
     }
   }, [userId]);
 
+  // Create a cache key that includes the time range for properly triggering refetches
+  const cacheKey = userId ? ["workouts", userId, startDate, endDate, "workouts", timeRange] : null;
+
   const { data: rawData, error, isValidating, mutate } = useSWR(
-    userId ? ["workouts", userId, startDate, endDate, "workouts"] : null,
-    fetchSummaryData,
+    cacheKey,
+    () => fetchSummaryData("workouts", userId as string, startDate, endDate, "workouts"),
     {
       revalidateOnFocus: false,
       dedupingInterval: 5000,
@@ -142,34 +146,47 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
   }, [userId, rawData, startDate, endDate]);
 
   const handleDateChange = (period: "1w" | "1m" | "6m" | "1y" | "2y" | "5y") => {
+    // Save the selected time range
+    setTimeRange(period);
+    
+    // Update date range based on selection
+    let newStartDate;
     switch (period) {
       case "1w":
-        setStartDate(moment().subtract(1, "week").toISOString());
+        newStartDate = moment().subtract(1, "week").toISOString();
         break;
       case "1m":
-        setStartDate(moment().subtract(1, "month").toISOString());
+        newStartDate = moment().subtract(1, "month").toISOString();
         break;
       case "6m":
-        setStartDate(moment().subtract(6, "months").toISOString());
+        newStartDate = moment().subtract(6, "months").toISOString();
         break;
       case "1y":
-        setStartDate(moment().subtract(1, "year").toISOString());
+        newStartDate = moment().subtract(1, "year").toISOString();
         break;
       case "2y":
-        setStartDate(moment().subtract(2, "years").toISOString());
+        newStartDate = moment().subtract(2, "years").toISOString();
         break;
       case "5y":
-        setStartDate(moment().subtract(5, "years").toISOString());
+        newStartDate = moment().subtract(5, "years").toISOString();
         break;
       default:
         return;
     }
+    
     // Always update end date to current time
-    setEndDate(moment().toISOString());
+    const newEndDate = moment().toISOString();
+    
+    // Update state to trigger data fetch
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
     
     // Clear previous error and response when changing date range
     setApiError(null);
     setApiResponse(null);
+    
+    // Force a data refresh with the new date range
+    setTimeout(() => mutate(), 0);
   };
 
   const refreshData = () => {
@@ -195,7 +212,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
       <VStack width="100%" alignItems="flex-start" spacing={1}>
         <Heading size="md">Weekly Workout Metrics</Heading>
         <Text fontSize="sm" color="gray.600">
-          Track your weekly workout volume and intensity over time
+          Track your weekly workout volume and velocity over time
         </Text>
         {userId && (
           <HStack>
@@ -299,7 +316,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
           </Box>
 
           <Box width={"100%"} height={"300px"}>
-            <Heading size="sm" mb={2}>Average Workout Intensity (km/h)</Heading>
+            <Heading size="sm" mb={2}>Average Weekly Velocity (km/h)</Heading>
             <WeeklyVelocityGraph data={processedData} />
           </Box>
           

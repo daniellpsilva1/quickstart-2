@@ -2,16 +2,25 @@ import type { NextPage } from "next";
 import { VStack, Heading, Text, Box } from "@chakra-ui/react";
 import { Card } from "../components/Card";
 import { CreateUserVital } from "../components/CreateUserVital";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { fetcher } from "../lib/client";
 import { WeeklyStatsPanel } from "../components/dashboard/WeeklyStatsPanel";
 
 const Home: NextPage = () => {
-  const [userID, setUserID] = useState(null);
-  const { data } = useSWR("/users/", fetcher);
+  const [userID, setUserID] = useState<string | null>(null);
+  const { data, mutate: refreshUsers } = useSWR("/users/", fetcher, {
+    refreshInterval: 0, // Don't auto-refresh on interval
+    revalidateOnFocus: false, // Don't refresh when window gets focus
+  });
 
   const usersFiltered = data?.users ? data.users : [];
+
+  // Callback to handle creating a user
+  const handleCreateUser = useCallback((newUserId: string) => {
+    setUserID(newUserId);
+    refreshUsers(); // Refresh the user list when a new user is created
+  }, [refreshUsers]);
 
   return (
     <VStack
@@ -29,7 +38,7 @@ const Home: NextPage = () => {
         <Box width={"100%"}>
           <CreateUserVital
             users={usersFiltered}
-            onCreate={setUserID}
+            onCreate={handleCreateUser}
             onSelect={setUserID}
           />
         </Box>
@@ -37,7 +46,7 @@ const Home: NextPage = () => {
           <Card>
             <Heading size={"md"}>2. Visualize user data</Heading>
             <Text>
-              Request user data and plot activity metrics over time.
+              Request user data and plot workout metrics over time.
             </Text>
             <Box width={"100%"}>
               <WeeklyStatsPanel userId={userID} />
