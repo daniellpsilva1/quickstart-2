@@ -33,8 +33,14 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
     }
   );
 
-  const handleDateChange = (period: "6m" | "1y" | "2y") => {
+  const handleDateChange = (period: "1w" | "1m" | "6m" | "1y" | "2y" | "5y") => {
     switch (period) {
+      case "1w":
+        setStartDate(moment().subtract(1, "week").toISOString());
+        return;
+      case "1m":
+        setStartDate(moment().subtract(1, "month").toISOString());
+        return;
       case "6m":
         setStartDate(moment().subtract(6, "months").toISOString());
         return;
@@ -43,6 +49,9 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
         return;
       case "2y":
         setStartDate(moment().subtract(2, "years").toISOString());
+        return;
+      case "5y":
+        setStartDate(moment().subtract(5, "years").toISOString());
         return;
       default:
         return;
@@ -70,7 +79,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
 
       <HStack width={"100%"} justifyContent={"flex-end"}>
         <RadioButtons
-          options={["6m", "1y", "2y"]}
+          options={["1w", "1m", "6m", "1y", "2y", "5y"]}
           defaultValue={"6m"}
           onChange={handleDateChange}
           selectedColor={"#8884d8"}

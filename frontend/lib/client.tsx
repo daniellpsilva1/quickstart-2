@@ -20,6 +20,7 @@ export const fetchSummaryData = (
   
   return fetch(url)
     .then((res) => {
+      console.log("Response status:", res.status);
       if (!res.ok) {
         throw new Error(`API error: ${res.status} ${res.statusText}`);
       }
