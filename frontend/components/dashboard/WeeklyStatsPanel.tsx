@@ -1,4 +1,4 @@
-import { VStack, Box, HStack, Heading, Text, Spinner, Alert, AlertIcon, Center, Button } from "@chakra-ui/react";
+import { VStack, Box, HStack, Heading, Text, Spinner, Alert, AlertIcon, Center, Button, Code, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon } from "@chakra-ui/react";
 import moment from "moment";
 import { fetchSummaryData } from "../../lib/client";
 import { useState, useEffect } from "react";
@@ -13,19 +13,16 @@ const processActivityData = (data: any) => {
   
   // If it's an array, it's likely already the activity array
   if (Array.isArray(data)) {
-    console.log("Data is already an array with", data.length, "items");
     return data;
   }
   
   // If it has an 'activity' property, use that
   if (data.activity && Array.isArray(data.activity)) {
-    console.log("Found activity array in response with", data.activity.length, "items");
     return data.activity;
   }
   
   // If there's a workout array, try to adapt it to activity format
   if (data.workouts && Array.isArray(data.workouts)) {
-    console.log("Found workouts array in response, adapting to activity format");
     return data.workouts.map((workout: any) => ({
       // Map workout fields to activity fields
       date: workout.time_start,
@@ -38,7 +35,6 @@ const processActivityData = (data: any) => {
     }));
   }
   
-  console.log("Could not find usable activity data in response");
   return [];
 };
 
@@ -48,10 +44,17 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
   );
   const [endDate, setEndDate] = useState(moment().toISOString());
   const [processedData, setProcessedData] = useState<any[]>([]);
+  const [apiResponse, setApiResponse] = useState<any>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [requestDetails, setRequestDetails] = useState<any>(null);
 
   // Reset data fetching when userId changes
   useEffect(() => {
-    console.log("User ID changed to:", userId);
+    if (userId) {
+      setApiResponse(null);
+      setApiError(null);
+      setRequestDetails(null);
+    }
   }, [userId]);
 
   const { data: rawData, error, isValidating, mutate } = useSWR(
@@ -61,12 +64,23 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
       revalidateOnFocus: false,
       dedupingInterval: 5000,
       onSuccess: (data) => {
-        console.log("Data fetched successfully, processing...");
+        setApiResponse(data);
         const processed = processActivityData(data);
         setProcessedData(processed);
+        
+        // Store request details for debugging
+        setRequestDetails({
+          endpoint: 'activity',
+          userId,
+          startDate: moment(startDate).format('YYYY-MM-DD'),
+          endDate: moment(endDate).format('YYYY-MM-DD'),
+          resultCount: processed.length,
+          dataType: typeof data,
+          isArray: Array.isArray(data)
+        });
       },
       onError: (err) => {
-        console.error("Error fetching data:", err);
+        setApiError(err.message || "Unknown error occurred");
       }
     }
   );
@@ -74,25 +88,55 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
   // Try fetching combined data if individual activity data is not available
   useEffect(() => {
     if (userId && (!rawData || (Array.isArray(rawData) && rawData.length === 0))) {
-      console.log("Attempting to fetch combined summary data...");
-      fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/summary/${userId}?start_date=${startDate}&end_date=${endDate}`)
+      // Clear previous error when trying alternate endpoint
+      setApiError(null);
+      
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/summary/${userId}?start_date=${startDate}&end_date=${endDate}`;
+      
+      // Update request details
+      setRequestDetails({
+        ...requestDetails,
+        endpoint: 'summary',
+        url,
+        status: 'fetching'
+      });
+      
+      fetch(url)
         .then(res => {
+          setRequestDetails({
+            ...requestDetails,
+            status: res.status,
+            statusText: res.statusText
+          });
+          
           if (!res.ok) throw new Error(`API error: ${res.status}`);
           return res.json();
         })
         .then(combinedData => {
-          console.log("Combined data received:", combinedData);
+          setApiResponse(combinedData);
           const processed = processActivityData(combinedData);
           setProcessedData(processed);
+          
+          setRequestDetails({
+            ...requestDetails,
+            resultCount: processed.length,
+            dataType: typeof combinedData,
+            isArray: Array.isArray(combinedData),
+            hasActivityKey: combinedData && typeof combinedData === 'object' && 'activity' in combinedData,
+            hasWorkoutsKey: combinedData && typeof combinedData === 'object' && 'workouts' in combinedData
+          });
         })
         .catch(err => {
-          console.error("Error fetching combined data:", err);
+          setApiError(err.message || "Error fetching combined data");
+          setRequestDetails({
+            ...requestDetails,
+            error: err.message
+          });
         });
     }
   }, [userId, rawData, startDate, endDate]);
 
   const handleDateChange = (period: "1w" | "1m" | "6m" | "1y" | "2y" | "5y") => {
-    console.log("Changing time period to:", period);
     switch (period) {
       case "1w":
         setStartDate(moment().subtract(1, "week").toISOString());
@@ -117,10 +161,16 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
     }
     // Always update end date to current time
     setEndDate(moment().toISOString());
+    
+    // Clear previous error and response when changing date range
+    setApiError(null);
+    setApiResponse(null);
   };
 
   const refreshData = () => {
-    console.log("Manually refreshing data...");
+    // Clear previous error and response when refreshing
+    setApiError(null);
+    setApiResponse(null);
     mutate();
   };
 
@@ -169,22 +219,71 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
 
       {userId && isValidating && (
         <Center width="100%" py={10}>
-          <Spinner color="#8884d8" size="xl" />
+          <VStack>
+            <Spinner color="#8884d8" size="xl" />
+            <Text mt={4}>Fetching data... This may take a moment.</Text>
+          </VStack>
         </Center>
       )}
 
-      {userId && error && (
-        <Alert status="error" rounded="md">
+      {userId && apiError && (
+        <Alert status="error" rounded="md" flexDirection="column" alignItems="flex-start">
           <AlertIcon />
-          Error loading data: {error.message}. Please try again.
+          <Text mb={2}>Error loading data: {apiError}</Text>
+          <Text fontSize="sm">
+            Try selecting a different time range or connecting your Strava account again.
+          </Text>
         </Alert>
       )}
 
       {userId && !isValidating && !hasData && (
-        <Alert status="info" rounded="md">
-          <AlertIcon />
-          No activity data found for this user in the selected time period. Try connecting more data sources or selecting a different time range.
-        </Alert>
+        <VStack width="100%" alignItems="flex-start" spacing={4}>
+          <Alert status="info" rounded="md">
+            <AlertIcon />
+            No activity data found for this user in the selected time period. Try connecting more data sources or selecting a different time range.
+          </Alert>
+          
+          <Text fontSize="sm" fontWeight="bold">Diagnostic Information:</Text>
+          
+          <Accordion allowToggle width="100%">
+            <AccordionItem>
+              <h2>
+                <AccordionButton>
+                  <Box flex="1" textAlign="left">
+                    Request Details
+                  </Box>
+                  <AccordionIcon />
+                </AccordionButton>
+              </h2>
+              <AccordionPanel pb={4}>
+                <Code p={2} rounded="md" width="100%" fontSize="xs" whiteSpace="pre-wrap">
+                  {requestDetails ? JSON.stringify(requestDetails, null, 2) : "No request details available"}
+                </Code>
+              </AccordionPanel>
+            </AccordionItem>
+            
+            <AccordionItem>
+              <h2>
+                <AccordionButton>
+                  <Box flex="1" textAlign="left">
+                    API Response
+                  </Box>
+                  <AccordionIcon />
+                </AccordionButton>
+              </h2>
+              <AccordionPanel pb={4}>
+                <Code p={2} rounded="md" width="100%" fontSize="xs" whiteSpace="pre-wrap">
+                  {apiResponse ? JSON.stringify(apiResponse, null, 2) : "No API response received"}
+                </Code>
+              </AccordionPanel>
+            </AccordionItem>
+          </Accordion>
+          
+          <Text fontSize="sm" mt={2}>
+            Note: You need at least one activity in Strava that falls within your selected date range. 
+            Your current date range is: {moment(startDate).format('YYYY-MM-DD')} to {moment(endDate).format('YYYY-MM-DD')}
+          </Text>
+        </VStack>
       )}
 
       {userId && hasData && (
@@ -198,6 +297,11 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
             <Heading size="sm" mb={2}>Average Weekly Velocity (km/h)</Heading>
             <WeeklyVelocityGraph data={processedData} />
           </Box>
+          
+          {/* Show number of activities found */}
+          <Text fontSize="sm" color="gray.600">
+            Found {processedData.length} activities in selected period
+          </Text>
         </>
       )}
     </VStack>
