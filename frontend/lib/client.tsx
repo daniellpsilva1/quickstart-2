@@ -13,12 +13,31 @@ export const fetchSummaryData = (
   start_date: string,
   end_date: string,
   key: string
-) =>
-  fetch(
-    `${URL_PREFIX}/summary/${data_type}/${userID}?start_date=${start_date}&end_date=${end_date}`
-  )
-    .then((res) => res.json())
-    .then((data) => data[key]);
+) => {
+  console.log(`Fetching ${data_type} data for user ${userID}`);
+  const url = `${URL_PREFIX}/summary/${data_type}/${userID}?start_date=${start_date}&end_date=${end_date}`;
+  console.log("Request URL:", url);
+  
+  return fetch(url)
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status} ${res.statusText}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      console.log(`Received ${data_type} data:`, data);
+      if (!data || !data[key]) {
+        console.warn(`Key ${key} not found in response:`, data);
+        return [];
+      }
+      return data[key];
+    })
+    .catch((err) => {
+      console.error("Error fetching data:", err);
+      throw err;
+    });
+};
 
 export class Client {
   constructor() {}
