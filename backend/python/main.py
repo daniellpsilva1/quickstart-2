@@ -1,9 +1,8 @@
 # TEST BACKEND IMPLEMENTATION
-from http.client import HTTPException
+from fastapi import FastAPI, HTTPException
 from tracemalloc import start
 from typing import Optional
 from vital import Client
-from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
@@ -25,6 +24,9 @@ app.add_middleware(  # type: ignore
     allow_headers=["*"],
 )
 
+@app.get("/")
+def root():
+    return {"status": "API is running", "message": "Welcome to the Vital API backend"}
 
 @app.get("/token/{user_key}")
 def get_token(user_key: str):
