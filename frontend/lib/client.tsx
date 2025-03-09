@@ -32,6 +32,7 @@ export const fetchSummaryData = (
         console.warn(`Key ${key} not found in response:`, data);
         return [];
       }
+      console.log(`Data for key ${key}:`, data[key]);
       return data[key];
     })
     .catch((err) => {
