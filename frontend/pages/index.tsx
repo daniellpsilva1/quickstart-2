@@ -1,12 +1,11 @@
 import type { NextPage } from "next";
-import { VStack, Heading, HStack, Text, Box } from "@chakra-ui/react";
+import { VStack, Heading, Text, Box } from "@chakra-ui/react";
 import { Card } from "../components/Card";
 import { CreateUserVital } from "../components/CreateUserVital";
 import { useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "../lib/client";
-import { SleepPanel } from "../components/dashboard/SleepPanel";
-import { ActivityPanel } from "../components/dashboard/ActivityPanel";
+import { WeeklyStatsPanel } from "../components/dashboard/WeeklyStatsPanel";
 
 const Home: NextPage = () => {
   const [userID, setUserID] = useState(null);
@@ -38,17 +37,11 @@ const Home: NextPage = () => {
           <Card>
             <Heading size={"md"}>2. Visualize user data</Heading>
             <Text>
-              Request user data and plot activity, workout sleep and other
-              health information.
+              Request user data and plot activity metrics over time.
             </Text>
-            <HStack width={"100%"} spacing={10} alignItems={"flex-start"}>
-              <Box width={"50%"}>
-                <SleepPanel userId={userID} />
-              </Box>
-              <Box width={"50%"}>
-                <ActivityPanel userId={userID} />
-              </Box>
-            </HStack>
+            <Box width={"100%"}>
+              <WeeklyStatsPanel userId={userID} />
+            </Box>
           </Card>
         </Box>
       </VStack>
