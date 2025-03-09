@@ -8,53 +8,68 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  Legend,
 } from "recharts";
 import _ from "lodash";
-import { Activity } from "../../models";
 
-// Calculate average weekly velocity
-const calculateWeeklyVelocity = (data: Activity[]) => {
+// Calculate average weekly workout intensity
+const calculateWeeklyIntensity = (data: any[]) => {
   // Group data by week
   const groupedByWeek = _.groupBy(data, (item) => {
-    return moment(item.date).startOf('week').format('YYYY-MM-DD');
+    return moment(item.time_start).startOf('week').format('YYYY-MM-DD');
   });
 
   // Convert to array of weekly data
-  return Object.entries(groupedByWeek).map(([week, activities]) => {
-    // For this demo, we'll simulate velocity by using a random formula based on activity intensity
-    // In a real app, velocity would be distance/time but we don't have that exact data
-    // We'll use average of (high activity * 15 + medium activity * 10 + low activity * 5) / totalActivityTime
+  return Object.entries(groupedByWeek).map(([week, workouts]) => {
+    // For real workout data, we can calculate actual intensity metrics
+    // We'll use distance divided by duration (in hours) to get km/h
     
-    const totalHighMinutes = _.sumBy(activities, 'high');
-    const totalMediumMinutes = _.sumBy(activities, 'medium');
-    const totalLowMinutes = _.sumBy(activities, 'low');
+    let totalDistance = 0;
+    let totalDurationHours = 0;
     
-    const totalActivityTime = totalHighMinutes + totalMediumMinutes + totalLowMinutes;
+    workouts.forEach(workout => {
+      // Get distance
+      const distance = workout.distance || (workout.calories ? workout.calories / 100 : 0);
+      
+      // Get duration in hours
+      let durationHours = 0;
+      if (workout.duration) {
+        // If duration is in minutes
+        durationHours = workout.duration / 60;
+      } else if (workout.time_start && workout.time_end) {
+        // Calculate from start/end times
+        const startTime = moment(workout.time_start);
+        const endTime = moment(workout.time_end);
+        durationHours = endTime.diff(startTime, 'hours', true);
+      }
+      
+      totalDistance += distance;
+      totalDurationHours += durationHours;
+    });
     
-    // Calculate weighted velocity in km/h
-    let avgVelocity = 0;
-    if (totalActivityTime > 0) {
-      avgVelocity = ((totalHighMinutes * 15) + (totalMediumMinutes * 10) + (totalLowMinutes * 5)) / totalActivityTime;
+    // Calculate average intensity (km/h)
+    let avgIntensity = 0;
+    if (totalDurationHours > 0) {
+      avgIntensity = totalDistance / totalDurationHours;
     }
     
     return {
       week: moment(week).valueOf(),
-      velocityKmh: parseFloat(avgVelocity.toFixed(2)),
+      intensityKmh: parseFloat(avgIntensity.toFixed(2)),
       year: moment(week).format('YYYY'),
-      weekNumber: moment(week).format('W')
+      weekNumber: moment(week).format('W'),
+      workoutCount: workouts.length
     };
   }).sort((a, b) => a.week - b.week);
 };
 
-export const WeeklyVelocityGraph: React.FunctionComponent<{ data: Activity[] }> = ({
+export const WeeklyVelocityGraph: React.FunctionComponent<{ data: any[] }> = ({
   data,
 }) => {
-  const weeklyVelocityData = calculateWeeklyVelocity(data);
+  const weeklyIntensityData = calculateWeeklyIntensity(data);
   
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={weeklyVelocityData}>
+      <LineChart data={weeklyIntensityData}>
         <XAxis
           axisLine={false}
           dataKey="week"
@@ -77,19 +92,24 @@ export const WeeklyVelocityGraph: React.FunctionComponent<{ data: Activity[] }> 
         <CartesianGrid vertical={false} />
         <Tooltip
           labelFormatter={(timestamp) => `Week ${moment(timestamp).format('W')} - ${moment(timestamp).format('YYYY')}`}
-          formatter={(value: number) => [`${value} km/h`, 'Average Velocity']}
+          formatter={(value: number, name: string) => {
+            if (name === 'intensityKmh') {
+              return [`${value} km/h`, 'Average Intensity'];
+            }
+            return [value, name];
+          }}
           labelStyle={{ fontSize: 12, color: "gray" }}
           contentStyle={{ borderRadius: 10 }}
         />
         <Line
           type="monotone"
-          dataKey="velocityKmh"
+          dataKey="intensityKmh"
           stroke="#82ca9d"
           fill="#82ca9d"
           strokeWidth={2}
           dot={{ stroke: '#82ca9d', strokeWidth: 2, r: 4 }}
           activeDot={{ stroke: '#82ca9d', strokeWidth: 2, r: 6 }}
-          name="Average Velocity"
+          name="Average Intensity"
         />
       </LineChart>
     </ResponsiveContainer>

@@ -5,27 +5,26 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  AreaChart,
-  Area,
-  ResponsiveContainer,
   LineChart,
   Line,
+  ResponsiveContainer,
 } from "recharts";
 import _ from "lodash";
-import { Activity } from "../../models";
 
-// Calculate weekly volume in kilometers
-const calculateWeeklyVolume = (data: Activity[]) => {
+// Calculate weekly volume in kilometers from workout data
+const calculateWeeklyVolume = (data: any[]) => {
   // Group data by week
   const groupedByWeek = _.groupBy(data, (item) => {
-    return moment(item.date).startOf('week').format('YYYY-MM-DD');
+    return moment(item.time_start).startOf('week').format('YYYY-MM-DD');
   });
 
   // Convert to array of weekly data
-  return Object.entries(groupedByWeek).map(([week, activities]) => {
-    // Sum up distances (converted from meters to kilometers)
-    // For this demo, we'll simulate distance by using calories_total divided by 100 as kilometers
-    const totalDistanceKm = _.sumBy(activities, (activity) => activity.calories_total / 100);
+  return Object.entries(groupedByWeek).map(([week, workouts]) => {
+    // Sum up distances from workouts (in kilometers)
+    const totalDistanceKm = _.sumBy(workouts, (workout) => {
+      // Use the distance field if available, otherwise estimate from calories
+      return workout.distance || (workout.calories ? workout.calories / 100 : 0);
+    });
     
     return {
       week: moment(week).valueOf(),
@@ -36,7 +35,7 @@ const calculateWeeklyVolume = (data: Activity[]) => {
   }).sort((a, b) => a.week - b.week);
 };
 
-export const WeeklyVolumeGraph: React.FunctionComponent<{ data: Activity[] }> = ({
+export const WeeklyVolumeGraph: React.FunctionComponent<{ data: any[] }> = ({
   data,
 }) => {
   const weeklyVolumeData = calculateWeeklyVolume(data);
@@ -61,7 +60,7 @@ export const WeeklyVolumeGraph: React.FunctionComponent<{ data: Activity[] }> = 
           tickLine={false}
           tick={{ fontSize: 14 }}
           domain={[0, 'auto']}
-          tickFormatter={(value) => `${value} km`}
+          tickFormatter={(value: number) => `${value} km`}
         />
         <CartesianGrid vertical={false} />
         <Tooltip

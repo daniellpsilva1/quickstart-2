@@ -8,30 +8,35 @@ import { WeeklyVolumeGraph } from "./WeeklyVolumeGraph";
 import { WeeklyVelocityGraph } from "./WeeklyVelocityGraph";
 
 // Process data regardless of structure
-const processActivityData = (data: any) => {
+const processWorkoutData = (data: any) => {
   if (!data) return [];
   
-  // If it's an array, it's likely already the activity array
+  // If there's a workout array, use that directly
+  if (data.workouts && Array.isArray(data.workouts)) {
+    return data.workouts;
+  }
+  
+  // If it's already an array of workouts
   if (Array.isArray(data)) {
     return data;
   }
   
-  // If it has an 'activity' property, use that
+  // If it has an 'activity' property, try to adapt it to workout format
   if (data.activity && Array.isArray(data.activity)) {
-    return data.activity;
-  }
-  
-  // If there's a workout array, try to adapt it to activity format
-  if (data.workouts && Array.isArray(data.workouts)) {
-    return data.workouts.map((workout: any) => ({
-      // Map workout fields to activity fields
-      date: workout.time_start,
-      calories_active: workout.calories || 0,
-      calories_total: workout.calories || 0,
-      high: workout.duration || 0, // Use duration as high intensity minutes
-      medium: 0,
-      low: 0,
-      source: workout.source
+    return data.activity.map((activity: any) => ({
+      // Map activity fields to workout fields
+      time_start: activity.date,
+      time_end: moment(activity.date).add(1, 'hour').toISOString(), // Estimate end time
+      calories: activity.calories_total || 0,
+      duration: (activity.high || 0) + (activity.medium || 0) + (activity.low || 0),
+      distance: activity.calories_total ? activity.calories_total / 100 : 0, // Estimate distance
+      source: activity.source,
+      sport: {
+        name: "Exercise",
+        icon: "",
+        category: "cardio",
+        id: "exercise"
+      }
     }));
   }
   
@@ -58,19 +63,19 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
   }, [userId]);
 
   const { data: rawData, error, isValidating, mutate } = useSWR(
-    userId ? ["activity", userId, startDate, endDate, "activity"] : null,
+    userId ? ["workouts", userId, startDate, endDate, "workouts"] : null,
     fetchSummaryData,
     {
       revalidateOnFocus: false,
       dedupingInterval: 5000,
       onSuccess: (data) => {
         setApiResponse(data);
-        const processed = processActivityData(data);
+        const processed = processWorkoutData(data);
         setProcessedData(processed);
         
         // Store request details for debugging
         setRequestDetails({
-          endpoint: 'activity',
+          endpoint: 'workouts',
           userId,
           startDate: moment(startDate).format('YYYY-MM-DD'),
           endDate: moment(endDate).format('YYYY-MM-DD'),
@@ -85,7 +90,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
     }
   );
 
-  // Try fetching combined data if individual activity data is not available
+  // Try fetching combined data if individual workout data is not available
   useEffect(() => {
     if (userId && (!rawData || (Array.isArray(rawData) && rawData.length === 0))) {
       // Clear previous error when trying alternate endpoint
@@ -114,7 +119,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
         })
         .then(combinedData => {
           setApiResponse(combinedData);
-          const processed = processActivityData(combinedData);
+          const processed = processWorkoutData(combinedData);
           setProcessedData(processed);
           
           setRequestDetails({
@@ -122,8 +127,8 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
             resultCount: processed.length,
             dataType: typeof combinedData,
             isArray: Array.isArray(combinedData),
-            hasActivityKey: combinedData && typeof combinedData === 'object' && 'activity' in combinedData,
-            hasWorkoutsKey: combinedData && typeof combinedData === 'object' && 'workouts' in combinedData
+            hasWorkoutsKey: combinedData && typeof combinedData === 'object' && 'workouts' in combinedData,
+            hasActivityKey: combinedData && typeof combinedData === 'object' && 'activity' in combinedData
           });
         })
         .catch(err => {
@@ -188,9 +193,9 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
       alignItems={"flex-start"}
     >
       <VStack width="100%" alignItems="flex-start" spacing={1}>
-        <Heading size="md">Weekly Performance Metrics</Heading>
+        <Heading size="md">Weekly Workout Metrics</Heading>
         <Text fontSize="sm" color="gray.600">
-          Track your weekly volume and velocity over time
+          Track your weekly workout volume and intensity over time
         </Text>
         {userId && (
           <HStack>
@@ -221,7 +226,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
         <Center width="100%" py={10}>
           <VStack>
             <Spinner color="#8884d8" size="xl" />
-            <Text mt={4}>Fetching data... This may take a moment.</Text>
+            <Text mt={4}>Fetching workout data... This may take a moment.</Text>
           </VStack>
         </Center>
       )}
@@ -229,7 +234,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
       {userId && apiError && (
         <Alert status="error" rounded="md" flexDirection="column" alignItems="flex-start">
           <AlertIcon />
-          <Text mb={2}>Error loading data: {apiError}</Text>
+          <Text mb={2}>Error loading workout data: {apiError}</Text>
           <Text fontSize="sm">
             Try selecting a different time range or connecting your Strava account again.
           </Text>
@@ -240,7 +245,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
         <VStack width="100%" alignItems="flex-start" spacing={4}>
           <Alert status="info" rounded="md">
             <AlertIcon />
-            No activity data found for this user in the selected time period. Try connecting more data sources or selecting a different time range.
+            No workout data found for this user in the selected time period. Try connecting more data sources or selecting a different time range.
           </Alert>
           
           <Text fontSize="sm" fontWeight="bold">Diagnostic Information:</Text>
@@ -280,7 +285,7 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
           </Accordion>
           
           <Text fontSize="sm" mt={2}>
-            Note: You need at least one activity in Strava that falls within your selected date range. 
+            Note: You need at least one workout in Strava that falls within your selected date range. 
             Your current date range is: {moment(startDate).format('YYYY-MM-DD')} to {moment(endDate).format('YYYY-MM-DD')}
           </Text>
         </VStack>
@@ -289,18 +294,18 @@ export const WeeklyStatsPanel = ({ userId }: { userId: any }) => {
       {userId && hasData && (
         <>
           <Box width={"100%"} height={"300px"}>
-            <Heading size="sm" mb={2}>Weekly Volume (km)</Heading>
+            <Heading size="sm" mb={2}>Weekly Workout Volume (km)</Heading>
             <WeeklyVolumeGraph data={processedData} />
           </Box>
 
           <Box width={"100%"} height={"300px"}>
-            <Heading size="sm" mb={2}>Average Weekly Velocity (km/h)</Heading>
+            <Heading size="sm" mb={2}>Average Workout Intensity (km/h)</Heading>
             <WeeklyVelocityGraph data={processedData} />
           </Box>
           
-          {/* Show number of activities found */}
+          {/* Show number of workouts found */}
           <Text fontSize="sm" color="gray.600">
-            Found {processedData.length} activities in selected period
+            Found {processedData.length} workouts in selected period
           </Text>
         </>
       )}
