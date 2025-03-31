@@ -1,0 +1,89 @@
+{
+    "workouts": [
+        {
+            "timestamp": "2025-03-08T17:22:16Z",
+            "data": {
+                "activity": {
+                    "id": 13825875209,
+                    "map": {
+                        "id": "a13825875209",
+                        "resource_state": 2,
+                        "summary_polyline": "_dq{Fdj{r@y@]}Ae@}Ao@yAw@sA_AuBkBsBuBcGkHmAkAuAiAeC{AyAw@{Ao@}Ae@o@QcBYeBQq@EwCEcBFsCRcBXaB`@qCz@aB`@sCh@uC^q@FeBDwCAyCKaBQeBUaB[aBc@oCcA{Au@eCwAoDaCyAy@o@Y}Ag@o@MeBSq@Gq@Cs@AeBHq@Fq@JaBb@q@VkCrAk@^mDjCyA|@o@X_Bh@aB^q@JcBJcB?q@EcBQo@O_Be@o@UkF{BmC_A_EeAiEs@uC[aBEsE?eBDcBLwCVaBVaBZaB\\_Bf@}An@oClAiCnA}Ax@gCzAuDnB{Al@}Aj@o@Nm@F}A`@}AR}DZ}DB_BEmCSm@IkCg@aFqA{Am@{EeCwFsDkDiBqDuAeCy@aHmBcEcAwCo@o@Ko@EcB@q@DcBPaBVaBJeBGq@KaBg@yAq@o@a@uAgAi@i@iAyAsAoAm@c@_Bs@o@Um@O_HuAoC}@}As@uA_AsAcAoAkAuBaCeBmC_AeBy@kBw@uBeAsDk@yBeAqDmAiD}@iBeA_Bg@k@oAsAyBuBkFuFoCuDa@m@{@eBaCgEsCcGiCsGy@mB_AgBa@q@c@o@{B}BwAaAk@[o@W_Ba@kEi@q@KaB]q@Sm@Sq@[yAcAi@e@mAyAgAcBcBwCkCcEqBaCgEqEiAyAiA_BcBuC{DyHkCaEc@k@g@g@i@c@wA_Am@Wm@Sq@Ss@KgBKcBAq@FcBZm@Rm@V{Ax@uAdAe@j@mBbC_@r@kBnE_BvEu@fBw@dB{@`BgAvAg@j@k@f@yAfA{Ap@o@Tq@NcBRgBJs@?q@CeBUeBe@_Bm@m@[uD{B{Au@aBc@q@I"
+                    },
+                    "gear": null,
+                    "laps": [],
+                    "name": "Afternoon Run",
+                    "type": "Run",
+                    "manual": false,
+                    "athlete": {
+                        "id": 160392076
+                    },
+                    "commute": false,
+                    "flagged": true,
+                    "gear_id": null,
+                    "private": false,
+                    "trainer": false,
+                    "calories": null,
+                    "distance": 14167.4,
+                    "elev_low": 56.6,
+                    "timezone": "(GMT+00:00) Europe/Lisbon",
+                    "elev_high": 312.6,
+                    "max_speed": 29.12,
+                    "max_watts": null,
+                    "upload_id": 14756711492,
+                    "end_latlng": [
+                        41.491541,
+                        -8.464696
+                    ],
+                    "has_kudoed": false,
+                    "kilojoules": null,
+                    "start_date": "2025-03-08T17:22:16Z",
+                    "utc_offset": 0,
+                    "description": null,
+                    "device_name": null,
+                    "embed_token": null,
+                    "external_id": "b4bb3a68-053d-467a-aec3-fda722baec3e-activity.fit",
+                    "kudos_count": 0,
+                    "moving_time": 509,
+                    "photo_count": 0,
+                    "best_efforts": [],
+                    "device_watts": null,
+                    "elapsed_time": 509,
+                    "start_latlng": [
+                        41.380645,
+                        -8.50099
+                    ],
+                    "workout_type": 0,
+                    "athlete_count": 1,
+                    "average_speed": 27.834,
+                    "average_watts": null,
+                    "comment_count": 0,
+                    "splits_metric": [],
+                    "segment_efforts": [],
+                    "splits_standard": [],
+                    "start_date_local": "2025-03-08T17:22:16Z",
+                    "achievement_count": 0,
+                    "total_photo_count": 0,
+                    "total_elevation_gain": 310.0,
+                    "weighted_average_watts": null
+                }
+            },
+            "provider_id": "13825875209",
+            "user_id": "23d69e08-b909-4811-b8f2-729f65f5b75c",
+            "source_id": 5,
+            "priority_id": 403180,
+            "id": "864b8848-c326-5eca-9cd7-8472e15700e8",
+            "sport_id": 61,
+            "source": {
+                "name": "Strava",
+                "slug": "strava",
+                "logo": "https://storage.googleapis.com/vital-assets/strava.png"
+            },
+            "sport": {
+                "id": 61,
+                "name": "Running",
+                "slug": "running"
+            }
+        }
+    ]
+}

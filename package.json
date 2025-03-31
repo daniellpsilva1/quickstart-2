@@ -1,0 +1,14 @@
+{
+  "name": "vital-user-data-downloader",
+  "version": "1.0.0",
+  "description": "Script to download Vital API data for a specific user",
+  "main": "download_user_data.js",
+  "scripts": {
+    "download": "node download_user_data.js"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1"
+  }
+} 

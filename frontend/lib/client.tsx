@@ -59,6 +59,53 @@ export const fetchSummaryData = (
     });
 };
 
+export const fetchDataWithDbFallback = (
+  data_type: string,
+  userID: string, 
+  start_date: string,
+  end_date: string,
+  key: string
+) => {
+  console.log(`Fetching ${data_type} data for user ${userID} (with DB fallback)`);
+  console.log(`Time range: ${start_date} to ${end_date}`);
+  
+  // Try database endpoint first
+  const dbUrl = `${URL_PREFIX}/db/summary/${data_type}/${userID}?start_date=${start_date}&end_date=${end_date}`;
+  console.log("Attempting DB endpoint:", dbUrl);
+  
+  return fetch(dbUrl)
+    .then((res) => {
+      console.log(`DB endpoint response: ${res.status} ${res.statusText}`);
+      if (!res.ok) {
+        // Fall back to direct API if database endpoint fails
+        console.log("Falling back to direct API endpoint");
+        return fetchSummaryData(data_type, userID, start_date, end_date, key);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      console.log(`Raw response data:`, data);
+      
+      // Try fetching full data if just the key isn't working
+      if (!data || typeof data[key] === 'undefined') {
+        console.warn(`Key '${key}' not found in response. Available keys:`, Object.keys(data));
+        
+        // If data exists but the key is missing, return the full data for inspection
+        if (data && typeof data === 'object') {
+          console.log("Returning full data object for inspection");
+          return data;
+        }
+        return [];
+      }
+      return data[key];
+    })
+    .catch((err) => {
+      console.error("Error fetching data:", err);
+      // Fall back to direct API if database endpoint throws error
+      return fetchSummaryData(data_type, userID, start_date, end_date, key);
+    });
+};
+
 export class Client {
   constructor() {}
 

@@ -37,19 +37,62 @@ const calculateWeeklyVolume = (data: any[]) => {
       return distance;
     });
     
+    // Get start and end dates of this week
+    const startDate = moment(week).format('MMM D');
+    const endDate = moment(week).add(6, 'days').format('MMM D');
+    
     return {
       week: moment(week).valueOf(),
       volumeKm: parseFloat(totalDistanceKm.toFixed(2)),
       year: moment(week).format('YYYY'),
-      weekNumber: moment(week).format('W')
+      weekNumber: moment(week).format('W'),
+      dateRange: `${startDate} - ${endDate}`
     };
   }).sort((a, b) => a.week - b.week);
 };
 
-export const WeeklyVolumeGraph: React.FunctionComponent<{ data: any[] }> = ({
+export const WeeklyVolumeGraph: React.FunctionComponent<{ 
+  data: any[],
+  startDate?: string,
+  endDate?: string
+}> = ({
   data,
+  startDate,
+  endDate
 }) => {
-  const weeklyVolumeData = calculateWeeklyVolume(data);
+  // Calculate the weekly volume data
+  const allWeeklyVolumeData = calculateWeeklyVolume(data);
+  
+  // Filter data based on start and end dates if provided
+  const weeklyVolumeData = React.useMemo(() => {
+    if (!startDate && !endDate) return allWeeklyVolumeData;
+    
+    const start = startDate ? moment(startDate).valueOf() : 0;
+    const end = endDate ? moment(endDate).valueOf() : moment().valueOf();
+    
+    return allWeeklyVolumeData.filter(item => {
+      return item.week >= start && item.week <= end;
+    });
+  }, [allWeeklyVolumeData, startDate, endDate]);
+  
+  // Function to format date label based on data density
+  const formatDateLabel = (timestamp: number) => {
+    const date = moment(timestamp);
+    const totalWeeks = weeklyVolumeData.length;
+    
+    // For sparse data (few weeks), show more details
+    if (totalWeeks <= 6) {
+      return `${date.format('MMM D')} - ${date.add(6, 'days').format('MMM D')}`;
+    }
+    // For moderate data density, show month and week
+    else if (totalWeeks <= 15) {
+      return `${date.format('MMM')} W${date.format('W')}`;
+    }
+    // For very dense data, just show month or simplified format
+    else {
+      return date.format('MMM D');
+    }
+  };
   
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -62,9 +105,7 @@ export const WeeklyVolumeGraph: React.FunctionComponent<{ data: any[] }> = ({
           domain={["auto", "auto"]}
           tickLine={false}
           tick={{ fontSize: 12 }}
-          tickFormatter={(timestamp) => {
-            return `Week ${moment(timestamp).format('W')} - ${moment(timestamp).format('YYYY')}`;
-          }}
+          tickFormatter={formatDateLabel}
         />
         <YAxis
           axisLine={false}
@@ -75,7 +116,10 @@ export const WeeklyVolumeGraph: React.FunctionComponent<{ data: any[] }> = ({
         />
         <CartesianGrid vertical={false} />
         <Tooltip
-          labelFormatter={(timestamp) => `Week ${moment(timestamp).format('W')} - ${moment(timestamp).format('YYYY')}`}
+          labelFormatter={(timestamp) => {
+            const date = moment(timestamp);
+            return `${date.format('MMM D')} - ${date.add(6, 'days').format('MMM D')}, ${date.format('YYYY')}`;
+          }}
           formatter={(value: number) => [`${value} km`, 'Weekly Volume']}
           labelStyle={{ fontSize: 12, color: "gray" }}
           contentStyle={{ borderRadius: 10 }}
