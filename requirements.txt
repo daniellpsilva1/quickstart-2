@@ -7,4 +7,5 @@ psycopg2-binary==2.9.9
 SQLAlchemy==2.0.27
 alembic==1.13.1
 tenacity==8.2.3
-python-multipart==0.0.6 
+python-multipart==0.0.6
+vital==5.1.0 
